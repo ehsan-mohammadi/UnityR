@@ -14,7 +14,7 @@ namespace Server.Hubs
         private static Dictionary<string, string> players = new Dictionary<string, string>();
 
         /// <summary>
-        /// Do something when player join in the game
+        /// When player join in the game
         /// </summary>
         public override Task OnConnected()
         {
@@ -25,12 +25,23 @@ namespace Server.Hubs
         }
 
         /// <summary>
+        /// When player disconnected
+        /// </summary>
+        public override Task OnDisconnected(bool stopCalled)
+        {
+            // Remove player from the players list
+            players.Remove(Context.ConnectionId);
+
+            return base.OnDisconnected(stopCalled);
+        }
+
+        /// <summary>
         /// Search for an alone opponent to connect them together
         /// </summary>
         public void SearchOpponent()
         {
             // Find a player that isn't in any group
-            string aloneOpponentId = players.FirstOrDefault(user => (user.Value == "-1" && user.Key != Context.ConnectionId)).Key;
+            string aloneOpponentId = players.FirstOrDefault(player => (player.Value == "-1" && player.Key != Context.ConnectionId)).Key;
 
             if(aloneOpponentId != null) // If player found
             {
@@ -44,7 +55,7 @@ namespace Server.Hubs
                 Groups.Add(aloneOpponentId, groupId);
 
                 // Send Success message to these players
-                Clients.Clients(new List<string>() { Context.ConnectionId, aloneOpponentId }).JoinToOppenent(true);
+                Clients.Clients(new List<string>() { Context.ConnectionId, aloneOpponentId }).JoinToOpponent(true);
             }
             else // If player not found
             {
