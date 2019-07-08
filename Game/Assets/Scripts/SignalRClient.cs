@@ -19,8 +19,12 @@ public class SignalRClient : MonoBehaviour
     private static Connection signalRConnection;
 
     // Other variables
-    ConnectVars connectVars;
-    float searchTimeOut = -1;
+    private ConnectVars connectVars;
+    private SignalRClient signalRClient;
+    private float searchTimeOut = -1;
+
+    public static string playerName;
+    private float[] receivedPosition = new float[2];
 
     // End of declaration
 
@@ -29,12 +33,11 @@ public class SignalRClient : MonoBehaviour
     /// </summary>
     public void Connect()
     {
+        signalRClient = this;
         connectVars = GameObject.Find("ConnectVars").GetComponent<ConnectVars>();
-        // Set searchTimeOut to -1
-        searchTimeOut = -1;
 
         // Initialize the connection
-        gameHub = new GameHub(ref connectVars);
+        gameHub = new GameHub(ref signalRClient, ref connectVars);
         signalRConnection = new Connection(uri, gameHub);
         signalRConnection.Open();
         
@@ -65,6 +68,24 @@ public class SignalRClient : MonoBehaviour
         searchTimeOut = Time.time + 60;
     }
 
+    /// <summary>
+    /// Send position information to the server
+    /// </summary>
+    /// <param name="x">The x position</param>
+    /// <param name="y">The y position</param>
+    public void SendTransform(float x, float y)
+    {
+        signalRConnection[gameHub.Name].Call("SendTransformation", x, y);
+    }
+
+    /// <summary>
+    /// Get the X that received from the server
+    /// </summary>
+    public float[] GetReceivedPosition()
+    {
+        return receivedPosition;
+    }
+
 	/// <summary>
     ///  Use this for initialization
 	/// </summary>
@@ -86,6 +107,9 @@ public class SignalRClient : MonoBehaviour
             connectVars.SetTextStatus("Sorry! No opponent found :(");
             connectVars.ButtonStartSetActive(false);
             connectVars.ButtonRetrySetActive(true);
+
+            // Set searchTimeOut to -1
+            searchTimeOut = -1;
         }
 	}
 
@@ -104,29 +128,41 @@ public class SignalRClient : MonoBehaviour
     /// </summary>
     public class GameHub : Hub
     {
-        ConnectVars connectVars;
+        private SignalRClient signalRClient;
+        private ConnectVars connectVars;
 
-        public GameHub(ref ConnectVars connectVars) : base("GameHub")
+        public GameHub(ref SignalRClient signalRClient, ref ConnectVars connectVars) : base("GameHub")
         {
+            this.signalRClient = signalRClient;
             this.connectVars = connectVars;
 
             // Register callback functions that received from the server
             base.On("JoinToOpponent", Joined);
             base.On("OpponentLeft", Left);
+            base.On("OpponentTransformation", Transformation);
         }
 
         /// <summary>
-        /// Return the join state from server - True: Opponent found, False: Otherwise
+        /// Return the join state from server - -1: Opponent not found, Otherwise: Opponent found
         /// </summary>
         private void Joined(Hub hub, MethodCallMessage msg)
         {
             Debug.Log(msg.Arguments[0].ToString());
-            bool found = (bool)(msg.Arguments[0]);
+            int playerId = int.Parse(msg.Arguments[0].ToString());
 
-            if (found)
-                SceneManager.LoadScene("Game");
-            else
+            if (playerId == -1)
+            {
                 connectVars.SetTextStatus("Waiting for an opponent...");
+            }
+            else
+            {
+                // Set searchTimeOut to -1
+                signalRClient.searchTimeOut = -1;
+                
+                // Set your GameObject name and start the game
+                playerName = "Player" + playerId;
+                SceneManager.LoadScene("Game");
+            }
         }
 
         /// <summary>
@@ -137,6 +173,20 @@ public class SignalRClient : MonoBehaviour
             // Back to the first scene
             Debug.Log("Player Disconnected!");
             SceneManager.LoadScene("Connect");
+        }
+
+        /// <summary>
+        /// Get the opponent position from the server
+        /// </summary>
+        private void Transformation(Hub hub, MethodCallMessage msg)
+        {
+            float receivedX = float.Parse(msg.Arguments[0].ToString());
+            float receivedY = float.Parse(msg.Arguments[1].ToString());
+
+            Debug.Log("Received opponent position: X = " + receivedX + ", Y = " + receivedY);
+            
+            signalRClient.receivedPosition[0] = receivedX;
+            signalRClient.receivedPosition[1] = receivedY;
         }
     }
 }

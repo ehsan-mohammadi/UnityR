@@ -48,6 +48,7 @@
   <ItemGroup>
      <Compile Include="Assets\Scripts\ButtonOnClick.cs" />
      <Compile Include="Assets\Scripts\ConnectVars.cs" />
+     <Compile Include="Assets\Scripts\PlayerController.cs" />
      <Compile Include="Assets\Scripts\Preload.cs" />
      <Compile Include="Assets\Scripts\SignalRClient.cs" />
  <Reference Include="UnityEngine.UI">

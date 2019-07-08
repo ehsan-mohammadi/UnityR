@@ -6,7 +6,9 @@ using UnityEngine.SceneManagement;
 
 public class Preload : MonoBehaviour 
 {
-	// Use this for initialization
+	/// <summary>
+    /// Use this for initialization
+	/// </summary>
 	void Start () 
     {
         // Load the connect scene

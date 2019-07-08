@@ -18,10 +18,22 @@ namespace Server.Hubs
         /// </summary>
         public override Task OnConnected()
         {
-            // Add player to the players list and set the group id to -1
-            players.Add(Context.ConnectionId, "-1");
+            // Add player to the players list and set the group id to -2
+            players.Add(Context.ConnectionId, "-2");
 
             return base.OnConnected();
+        }
+
+        /// <summary>
+        /// When player re-join the game
+        /// </summary>
+        public override Task OnReconnected()
+        {
+            // Add player to the players list and set the group id to -2
+            if(players.FirstOrDefault(player => player.Key == Context.ConnectionId).Key == null)
+                players.Add(Context.ConnectionId, "-2");
+
+            return base.OnReconnected();
         }
 
         /// <summary>
@@ -43,7 +55,8 @@ namespace Server.Hubs
         /// </summary>
         public void SearchOpponent()
         {
-            // Find a player that isn't in any group
+            // Set your groupName to -1 and try to find a player that isn't in any group
+            players[Context.ConnectionId] = "-1";
             string aloneOpponentId = players.FirstOrDefault(player => (player.Value == "-1" && player.Key != Context.ConnectionId)).Key;
 
             if(aloneOpponentId != null) // If player found
@@ -58,13 +71,25 @@ namespace Server.Hubs
                 Groups.Add(aloneOpponentId, groupId);
 
                 // Send Success message to these players
-                Clients.Clients(new List<string>() { Context.ConnectionId, aloneOpponentId }).JoinToOpponent(true);
+                Clients.Client(Context.ConnectionId).JoinToOpponent(1);
+                Clients.Client(aloneOpponentId).JoinToOpponent(2);
             }
             else // If player not found
             {
                 // Send Fail message to the caller player
-                Clients.Caller.JoinToOpponent(false);
+                Clients.Caller.JoinToOpponent(-1);
             }
+        }
+
+        /// <summary>
+        /// Get the position information of players and send it to opponent
+        /// </summary>
+        /// <param name="x">The received x position</param>
+        /// <param name="y">The received y position</param>
+        public void SendTransformation(float x, float y)
+        {
+            string groupId = players[Context.ConnectionId];
+            Clients.OthersInGroup(groupId).OpponentTransformation(x, y);
         }
     }
 }
