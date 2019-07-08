@@ -13,22 +13,13 @@ public class SignalRClient : MonoBehaviour
 {
     // Declaration the variables
 
-    // Unity variables
-    [SerializeField]
-    private Text textStatus;
-    [SerializeField]
-    private Button buttonConnect;
-    [SerializeField]
-    private Button buttonStart;
-    [SerializeField]
-    private Button buttonRetry;
-
     // SignalR variables
     private static Uri uri = new Uri("http://localhost:5000/signalr/");
     private static GameHub gameHub;
     private static Connection signalRConnection;
 
     // Other variables
+    ConnectVars connectVars;
     float searchTimeOut = -1;
 
     // End of declaration
@@ -38,28 +29,29 @@ public class SignalRClient : MonoBehaviour
     /// </summary>
     public void Connect()
     {
+        connectVars = GameObject.Find("ConnectVars").GetComponent<ConnectVars>();
         // Set searchTimeOut to -1
         searchTimeOut = -1;
 
         // Initialize the connection
-        gameHub = new GameHub(ref textStatus);
+        gameHub = new GameHub(ref connectVars);
         signalRConnection = new Connection(uri, gameHub);
         signalRConnection.Open();
         
         signalRConnection.OnConnected += (conn) => 
         {
             Debug.Log("Connect Successfully!");
-            textStatus.text = "You connected successfully!\nTap START! to find an opponent...";
+            connectVars.SetTextStatus("You connected successfully!\nTap START! to find an opponent...");
  
-            // Disable buttonConnect and Enable buttonStart
-            buttonConnect.gameObject.SetActive(false);
-            buttonRetry.gameObject.SetActive(false);
-            buttonStart.gameObject.SetActive(true);
+            // Disable buttonConnect, buttonRetry and Enable buttonStart
+            connectVars.ButtonConnectSetActive(false);
+            connectVars.ButtonRetrySetActive(false);
+            connectVars.ButtonStartSetActive(true);
         };
         signalRConnection.OnError += (conn, err) =>
         {
             Debug.Log(err);
-            textStatus.text = "Can't connect to the server :(";
+            connectVars.SetTextStatus("Can't connect to the server :(");
         };
     }
 
@@ -90,9 +82,10 @@ public class SignalRClient : MonoBehaviour
         if (searchTimeOut != -1 && Time.time > searchTimeOut)
         {
             signalRConnection.Close();
-            textStatus.text = "Sorry! No opponent found :(";
-            buttonStart.gameObject.SetActive(false);
-            buttonRetry.gameObject.SetActive(true);
+
+            connectVars.SetTextStatus("Sorry! No opponent found :(");
+            connectVars.ButtonStartSetActive(false);
+            connectVars.ButtonRetrySetActive(true);
         }
 	}
 
@@ -111,13 +104,15 @@ public class SignalRClient : MonoBehaviour
     /// </summary>
     public class GameHub : Hub
     {
-        private Text textStatus;
+        ConnectVars connectVars;
 
-        public GameHub(ref Text textStatus) : base("GameHub")
+        public GameHub(ref ConnectVars connectVars) : base("GameHub")
         {
-            this.textStatus = textStatus;
+            this.connectVars = connectVars;
 
+            // Register callback functions that received from the server
             base.On("JoinToOpponent", Joined);
+            base.On("OpponentLeft", Left);
         }
 
         /// <summary>
@@ -129,9 +124,19 @@ public class SignalRClient : MonoBehaviour
             bool found = (bool)(msg.Arguments[0]);
 
             if (found)
-                SceneManager.LoadScene(1);
+                SceneManager.LoadScene("Game");
             else
-                textStatus.text = "Waiting for an opponent...";
+                connectVars.SetTextStatus("Waiting for an opponent...");
+        }
+
+        /// <summary>
+        /// Do some operations when opponent left the game
+        /// </summary>
+        private void Left(Hub hub, MethodCallMessage msg)
+        {
+            // Back to the first scene
+            Debug.Log("Player Disconnected!");
+            SceneManager.LoadScene("Connect");
         }
     }
 }
