@@ -46,6 +46,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+     <Compile Include="Assets\Scripts\ButtonOnClick.cs" />
+     <Compile Include="Assets\Scripts\ConnectVars.cs" />
+     <Compile Include="Assets\Scripts\Preload.cs" />
      <Compile Include="Assets\Scripts\SignalRClient.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>D:/Program Files/Unity/Unity5.5.1f1/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>

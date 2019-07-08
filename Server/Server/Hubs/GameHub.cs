@@ -29,8 +29,11 @@ namespace Server.Hubs
         /// </summary>
         public override Task OnDisconnected(bool stopCalled)
         {
-            // Remove player from the players list
+            string groupName = players[Context.ConnectionId];
+
+            // Remove player from the players list and send message to other player to tell him the opponent left
             players.Remove(Context.ConnectionId);
+            Clients.Group(groupName).OpponentLeft();
 
             return base.OnDisconnected(stopCalled);
         }
